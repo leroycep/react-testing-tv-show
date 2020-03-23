@@ -1,5 +1,5 @@
 import React from "react";
-import { render, fireEvent, wait, act } from "@testing-library/react";
+import { render, fireEvent, waitFor, act } from "@testing-library/react";
 import { fetchShow as mockFetchShow } from "./api/fetchShow";
 import App from "./App";
 
@@ -7,7 +7,6 @@ jest.mock("./api/fetchShow");
 
 const mockData = {
   id: 2993,
-  url: "http://www.tvmaze.com/shows/2993/stranger-things",
   name: "Stranger Things",
   type: "Scripted",
   language: "English",
@@ -585,6 +584,31 @@ test("renders without crashing", async () => {
   mockFetchShow.mockResolvedValueOnce(mockData);
 
   await act(async () => {
-    render(<App />);
+    return render(<App />);
   });
+});
+
+test("renders list of episodes without crashing", async () => {
+  mockFetchShow.mockResolvedValueOnce(mockData);
+
+  const { getByText, queryAllByTestId } = render(<App />);
+
+  const selector = await waitFor(() => getByText(/select a season/i));
+  await fireEvent.mouseDown(selector);
+
+  const option = await waitFor(() => getByText(/season 1/i));
+  fireEvent.click(option);
+
+  // Try to find two episodes from season 1
+  await waitFor(() => [
+    expect(
+      getByText(/chapter one: the vanishing of will byers/i)
+    ).toBeInTheDocument(),
+    expect(
+      getByText(/chapter two: the weirdo on maple street/i)
+    ).toBeInTheDocument(),
+    expect(
+      queryAllByTestId("episode")
+    ).toHaveLength(8),
+  ]);
 });
